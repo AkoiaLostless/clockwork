@@ -534,6 +534,93 @@ do
     check('a crashed apply says what happened', a.failed:match('equipex blew up') ~= nil, true)
     check('a crashed apply sent nothing', #world.equipCalls, 0)
 
+    -- /cw load <name>: the Apply button's checks and the same apply, from a
+    -- chat line - which a macro can send and a button cannot. A refusal
+    -- prints the reason and starts nothing.
+    local function cw(line) printed = {} handlers['command']({ command = line }) end
+    local function said(text)
+        for _, p in ipairs(printed) do if p:find(text, 1, true) then return true end end
+        return false
+    end
+    local function refused(label, line, reason)
+        local before = api.state().apply
+        cw(line)
+        check(label .. ' says why', said(reason), true)
+        check(label .. ' starts nothing', api.state().apply == before and world.task == nil, true)
+    end
+    local VE = { 'Valoredge Head', 'Valoredge Frame' }
+    local function veSet(attachments) return { head = VE[1], frame = VE[2], attachments = attachments } end
+    api.saveSet('VE swap', swap)
+    api.saveSet('same', veSet({ 'Strobe', 'Attuner', 'Armor Plate' }))
+    api.saveSet('odd head', { head = 'Nope Head', frame = VE[2], attachments = { 'Attuner' } })
+    api.saveSet('storm', { head = 'Stormwaker Head', frame = VE[2], attachments = { 'Attuner' } })   -- head 4: not in the mask
+    api.saveSet('hot', veSet({ 'Attuner', 'Tension Spring II', 'Strobe', 'Tension Spring', 'Inhibitor', 'Flame Holder' }))
+    api.saveSet('broken', { head = '', frame = '' })
+
+    -- the rest of the line is the name, so one with a space needs no quotes
+    reset()
+    cw('/cw load VE swap')
+    check('load says it started', said('VE swap'), true)
+    pump()
+    a = api.state().apply
+    check('load applies the named set', a.set, 'VE swap')
+    check('load runs it through', a.done and a.failed == nil, true)
+    check('load sends its two steps', #world.equipCalls, 2)
+    check('load lands Inhibitor', server.attachments[3], 3)
+
+    -- the lookup ignores case, as Windows does; the apply carries the saved name
+    reset()
+    cw('/cw load ve SWAP')
+    pump()
+    check('load ignores case', api.state().apply.set, 'VE swap')
+
+    -- PUP as a sub job is PUP enough, as it is for the button
+    reset()
+    world.mainjob, world.subjob = 1, 18
+    cw('/cw load VE swap')
+    pump()
+    check('load works with PUP sub', api.state().apply.done and api.state().apply.failed == nil, true)
+    check('load sends the sub-job flag', world.equipCalls[1] and world.equipCalls[1][1], 1)
+    world.mainjob, world.subjob = 18, 0
+
+    -- nothing to change: said, not silent
+    reset()
+    cw('/cw load same')
+    check('load of what is worn says so', said('already equipped'), true)
+    check('load of what is worn sends nothing', #world.equipCalls, 0)
+
+    -- one apply at a time: a second load leaves the running one alone
+    reset()
+    cw('/cw load VE swap')
+    local first = api.state().apply
+    cw('/cw load VE swap')
+    check('a second load says one is running', said('running'), true)
+    check('a second load leaves the first', api.state().apply, first)
+    pump()
+    check('the first finishes on its own two steps', #world.equipCalls, 2)
+
+    -- every reason the button gives, given in chat instead
+    reset()
+    refused('unknown name', '/cw load nope', 'nope')
+    refused('bad file', '/cw load broken', 'broken')
+    refused('unknown head', '/cw load odd head', 'unknown head or frame')
+    refused('head not owned', '/cw load storm', 'head or frame not owned')
+    refused('over capacity', '/cw load hot', 'over capacity')
+    petOut()
+    refused('automaton out', '/cw load VE swap', 'deactivate first')
+    petIn()
+    world.mainjob = 1
+    refused('not PUP', '/cw load VE swap', 'not PUP')
+    world.mainjob = 18
+    api.clear044()
+    refused('no 0x044', '/cw load VE swap', 'no automaton data')
+
+    -- bare, it lists what there is to load
+    cw('/cw load')
+    check('bare load lists the sets', said('VE swap') and said('VE tank'), true)
+
+    for _, n in ipairs({ 'VE swap', 'same', 'odd head', 'storm', 'hot', 'broken' }) do api.deleteSet(n) end
+
     -- unowned attachment is skipped and named
     reset()
     api.startApply('unowned', { head = 'Valoredge Head', frame = 'Valoredge Frame', attachments = { 'Attuner', 'Strobe', 'Armor Plate', 'Amplifier' } })

@@ -499,14 +499,15 @@ do
           src:find('Maintenance needs +2 or better', 1, true) ~= nil, true)
     check('the oils tooltip drops the ammo sentence',
           src:find('AMMO slot', 1, true), nil)
-    local loadoutSrc = (function()
-        local f = assert(io.open(ADDON_DIR .. '/cw/ui/loadout.lua', 'r'))
+    -- NO_DATA lives in cw/sets.lua: the Apply button and /cw load both give it
+    local setsSrc = (function()
+        local f = assert(io.open(ADDON_DIR .. '/cw/sets.lua', 'r'))
         local t = f:read('*a')
         f:close()
         return t
     end)()
     check('the loadout offers the gear route',
-          loadoutSrc:find('equip or unequip any piece of gear or an attachment', 1, true) ~= nil, true)
+          setsSrc:find('equip or unequip any piece of gear or an attachment', 1, true) ~= nil, true)
 
     -- /cw show is the switch; the burden dump keeps the bare command and gains
     -- its own name

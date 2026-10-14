@@ -14,19 +14,14 @@ local S  = require('cw.sets')
 local validSetName, listSets, setExists, loadSet = S.validSetName, S.listSets, S.setExists, S.loadSet
 local saveSet, deleteSet, renameSet, itemIds = S.saveSet, S.deleteSet, S.renameSet, S.itemIds
 local capacityOf, unownedIn, equippedSet, liveSet = S.capacityOf, S.unownedIn, S.equippedSet, S.liveSet
-local startApply = S.startApply
+local startApply, applyBlocker, applyRunning = S.startApply, S.applyBlocker, S.applyRunning
 local SF = require('cw.ui.surface')
 local EL_COLOR, COL_GOOD, COL_WARN, COL_BAD = SF.EL_COLOR, SF.COL_GOOD, SF.COL_WARN, SF.COL_BAD
 local COL_DIM, COL_TEXT, hudPad, hudInner = SF.COL_DIM, SF.COL_TEXT, SF.hudPad, SF.hudInner
 local hudText, tip, elementIcon = SF.hudText, SF.tip, SF.elementIcon
--- The shared tables, never reassigned after cw/state.lua creates them.
-local ids, snap = tm.ids, tm.snap
 
 -- ---------------------------------------------------------- loadout tab --
--- Shown wherever the tab needs the 0x044 and has none: it lists what makes the
--- server send one (LSB: gameok, myroom_job, automaton PostTick,
--- m_EffectsChanged, merits, every 0x102). Opening a menu does not.
-local NO_DATA = 'no automaton data from the server yet: zone, change job, activate, equip or unequip any piece of gear or an attachment, or gain any status effect'
+local NO_DATA = S.NO_DATA
 
 -- One tab for what the automaton wears and for the saved sets: one list,
 -- one preview.
@@ -251,28 +246,18 @@ local function drawLoadoutTab()
     local unowned = (set ~= nil and not live) and unownedIn(set) or nil
     local isUnowned = {}
     for _, n in ipairs(unowned or {}) do isUnowned[n] = true end
-    local used, caps, fits = {}, {}, true
-    if set ~= nil then used, caps, fits = capacityOf(set) end
+    local used, caps = {}, {}
+    if set ~= nil then used, caps = capacityOf(set) end
 
-    -- 1. the top row: dropdown, Save..., and Apply for a saved set. `ids` is
-    -- the addon-level self/pet table; the name map gets its own name.
+    -- 1. the top row: dropdown, Save..., and Apply for a saved set.
     setsCombo(a)
     imgui.SameLine()
     if imgui.Button('Save...##cw_savebtn') then imgui.OpenPopup('cw_save') end
     savePopup(current)
     if set ~= nil and not live then
-        local reason = nil
-        local names = itemIds()
-        if not snap.is_pup then reason = 'not PUP'
-        elseif ids.pet_id ~= 0 then reason = 'deactivate first'
-        elseif a == nil or a.attachments == nil then reason = NO_DATA
-        elseif names.head[set.head] == nil or names.frame[set.frame] == nil then reason = 'unknown head or frame'
-        elseif isUnowned[set.head] or isUnowned[set.frame] then reason = 'head or frame not owned'
-        elseif not fits then reason = 'over capacity'
-        end
+        local reason = applyBlocker(set)
         imgui.SameLine()
-        local busy = tm.applyState ~= nil and not tm.applyState.done
-        imgui.BeginDisabled(reason ~= nil or busy)
+        imgui.BeginDisabled(reason ~= nil or applyRunning())
         if imgui.Button('Apply##cw_apply') then startApply(setsUi.selected, set) end
         imgui.EndDisabled()
         if reason ~= nil then hudText(COL_DIM, reason) end
