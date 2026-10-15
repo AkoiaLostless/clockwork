@@ -1,5 +1,6 @@
 -- cw/commands.lua - the /clockwork and /cw command handler: the help, the owned
--- and equipped listings, demo, compact, show, reset and sync. Exports onCommand.
+-- and equipped listings, demo, compact, show, load, reset and sync. Exports
+-- onCommand.
 local chat = require('chat')
 local config = require('cw.config')
 local D  = require('cw.data')
@@ -97,6 +98,48 @@ local function statCommand(which, value)
     end
 end
 
+-- `/cw load <name>` - a saved set, applied as the Loadout tab's Apply button
+-- applies it: the same checks, the same apply. What a macro can reach, which a
+-- button is not. The rest of the line is the name, so one with a space needs
+-- no quotes. Bare, it lists the saved sets.
+local function loadCommand(words)
+    local function say(line) print(chat.header('clockwork'):append(chat.message(line))) end
+    local function oops(line) print(chat.header('clockwork'):append(chat.error(line))) end
+    local names = S.listSets()
+    if #words == 0 then
+        say((#names == 0) and 'no saved sets - save one on the Loadout tab'
+            or ('/cw load <name> - your sets: ' .. table.concat(names, ', ')))
+        return
+    end
+    local typed = table.concat(words, ' ')
+    -- The saved spelling, not the typed one: Windows opens either, but the
+    -- apply's chat lines and the tab's status name the set as saved.
+    local name = nil
+    for _, n in ipairs(names) do if n:lower() == typed:lower() then name = n end end
+    if name == nil then
+        oops(('no saved set named "%s" - /cw load lists them'):format(typed))
+        return
+    end
+    if S.applyRunning() then
+        oops('an apply is already running - wait for it to finish')
+        return
+    end
+    local set, err = S.loadSet(name)
+    if set == nil then
+        oops(('%s did not load: %s'):format(name, tostring(err)))
+        return
+    end
+    local reason = S.applyBlocker(set)
+    if reason ~= nil then
+        oops(('cannot apply %s: %s'):format(name, reason))
+        return
+    end
+    S.startApply(name, set)
+    local st = tm.applyState
+    say(st.done and ('%s: %s'):format(name, st.status)
+        or ('applying %s: %d changes'):format(name, #st.steps))
+end
+
 -- ============================================================== commands =
 local function onCommand(e)
     local args = e.command:args()
@@ -176,6 +219,9 @@ local function onCommand(e)
     elseif sub == 'stat' then
         statCommand(args[3], args[4])
 
+    elseif sub == 'load' then
+        loadCommand({ select(3, unpack(args)) })
+
     elseif sub == 'compact' then
         -- With 1 or 2 it picks the rows and the strip, whichever layout is
         -- up; bare, it toggles the strip.
@@ -215,7 +261,7 @@ local function onCommand(e)
         -- predictions, size - have no command. Two ways to set one thing is one
         -- way for them to disagree, and the tab is the one that writes the file
         -- and shows the current value. What is here either shows you something,
-        -- changes a mode, or is destructive.
+        -- changes a mode, puts on a set, or is destructive.
         local function say(line) print(chat.header('clockwork'):append(chat.message(line))) end
         say('/cw - what the automaton is doing')
         say('  show - the panel on or off')
@@ -225,6 +271,8 @@ local function onCommand(e)
         say('    each /cw demo is the next one, then off again')
         say('  attachments - the attachments you own')
         say('  equipped - head, frame and attachments')
+        say('  load <name> - put a saved set on the automaton, as Apply')
+        say('    does; bare, it lists your sets')
         say('  stat - the stat you wear for each maneuver, which a gear swap')
         say('    hides from the client: /cw stat wind 83, or now, or off')
         say('  reset - clear burden, costs and counters')

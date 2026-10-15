@@ -34,7 +34,8 @@ prediction did *not* match the server, so the model can be corrected from real p
   dial, the name and the time (Settings tab, **display**).
 - **Loadout tab.** Head, frame and every attachment with its live modifier values, plus
   capacity per element. Saved attachment sets with a preview and a confirmed apply,
-  paced a second a step as pupsets is.
+  paced a second a step as pupsets is — from the tab's Apply button, or from a macro
+  with `/cw load <name>`.
 - **What-if sidebar.** For each of the eight elements, what using that maneuver *right
   now* would change and what it would cost.
 - **Anomaly log.** A JSONL record of every maneuver and automaton weaponskill, with
@@ -83,6 +84,7 @@ To load it every time, add `/addon load clockwork` to your Ashita script.
 | `/cw demo` | made-up automatons, for looking at the HUD off PUP; each `/cw demo` is the next one, then off again |
 | `/cw attachments` | the attachments you own |
 | `/cw equipped` | head, frame and attachments |
+| `/cw load <name>` | put a saved attachment set on the automaton, as the Loadout tab's Apply does — the same checks, the same apply, so the automaton has to be deactivated first. Works from a macro; a name with a space needs no quotes. Bare `/cw load` lists your sets |
 | `/cw stat` | the stat you wear when each maneuver goes off — `/cw stat wind 83`, `now` to take what you are wearing, `off` to go back to reading it. See *Gear swaps* below |
 | `/cw reset` | clear burden, learned costs and counters |
 | `/cw sync` | burden to zero — manual resync only |

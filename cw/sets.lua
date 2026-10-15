@@ -2,7 +2,8 @@
 -- one. Owns the set files (pupsets' format), the capacity and ownership checks
 -- and the Apply plan. Exports the store (list/load/save/delete/rename and
 -- validSetName), capacityOf, unownedIn, equippedSet, liveSet, planApply,
--- startApply and their helpers; publishes tm.flushLoadout and tm.applyState.
+-- applyBlocker, applyRunning, startApply and their helpers, and NO_DATA;
+-- publishes tm.flushLoadout and tm.applyState.
 local ffi  = require('ffi')
 local chat = require('chat')
 local D  = require('cw.data')
@@ -526,8 +527,33 @@ local function runApply(name, steps, skipped)
     end)
 end
 
--- Entry from the Apply button. Needs a 0x044 to diff against; the button is
--- disabled without one. Items you do not own are skipped and named.
+-- Shown wherever something needs the 0x044 and has none: it lists what makes
+-- the server send one (LSB: gameok, myroom_job, automaton PostTick,
+-- m_EffectsChanged, merits, every 0x102). Opening a menu does not.
+local NO_DATA = 'no automaton data from the server yet: zone, change job, activate, equip or unequip any piece of gear or an attachment, or gain any status effect'
+
+local function applyRunning() return tm.applyState ~= nil and not tm.applyState.done end
+
+-- Why a saved set cannot be applied now, or nil when it can. The one list the
+-- Loadout tab's Apply button and /cw load both read, so the two cannot
+-- disagree. An apply already running is not on it: the button greys out for
+-- that without a reason, and the command says so itself.
+local function applyBlocker(set)
+    if not (isPup() or isPupSub()) then return 'not PUP' end
+    if ids.pet_id ~= 0 then return 'deactivate first' end
+    if tm.auto044 == nil or tm.auto044.attachments == nil then return NO_DATA end
+    local names = itemIds()
+    if names.head[set.head] == nil or names.frame[set.frame] == nil then return 'unknown head or frame' end
+    for _, n in ipairs(unownedIn(set) or {}) do
+        if n == set.head or n == set.frame then return 'head or frame not owned' end
+    end
+    local _, _, fits = capacityOf(set)
+    if not fits then return 'over capacity' end
+    return nil
+end
+
+-- Entry from the Apply button and /cw load. Needs a 0x044 to diff against;
+-- both refuse without one. Items you do not own are skipped and named.
 local function startApply(name, set)
     if tm.auto044 == nil or tm.auto044.attachments == nil then return end
     local cur = { head = tm.auto044.head, frame = tm.auto044.frame, attachments = tm.auto044.attachments }
@@ -548,4 +574,5 @@ return { serializeSet = serializeSet, parseSetFile = parseSetFile, validSetName 
          saveSet = saveSet, deleteSet = deleteSet, renameSet = renameSet, elementCaps = elementCaps,
          itemIds = itemIds, capacityOf = capacityOf, unownedIn = unownedIn,
          equippedSet = equippedSet, liveSet = liveSet, planApply = planApply,
+         NO_DATA = NO_DATA, applyRunning = applyRunning, applyBlocker = applyBlocker,
          startApply = startApply }
