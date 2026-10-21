@@ -59,6 +59,7 @@ FILES = [
     ("suites/14_deploy_and_switching.lua", "Deploy and Retrieve, the compact strip, reconcile, culled automatons, character switches"),
     ("suites/15_demo.lua", "demo mode"),
     ("suites/16_ja_cooldowns.lua", "your own job abilities' recasts: the read, the switches, the column, the Settings block"),
+    ("suites/17_gear_stats.lua", "your stat with the gear on now: item text, the 0x061 basis, a maneuver set the client never sees"),
     ("fixtures/report.lua", "the totals; any failure makes the run fail"),
 ]
 

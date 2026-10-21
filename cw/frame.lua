@@ -19,6 +19,7 @@ local refreshStatChecks, activeManeuvers, maneuverCounts, decay = B.refreshStatC
 local refreshPrediction = B.refreshPrediction
 local P  = require('cw.pet')
 local DEMO = require('cw.demo')
+local G  = require('cw.gear')
 local resolveIds, forgetCharacter = P.resolveIds, P.forgetCharacter
 -- The shared tables, never reassigned after cw/state.lua creates them.
 local ids, snap = tm.ids, tm.snap
@@ -213,6 +214,13 @@ local function tick()
     expireTarget()   -- before anything reads petTarget: the ladder, the row
     sampleFlameHolder()
 
+    -- The gear your stats in memory were taken with: at the first frame after
+    -- a 0x061, or - loaded mid-session, before one arrives - whatever is on now.
+    if tm.demo == nil and (tm.statRefreshPending or tm.statBasis == nil) then
+        G.markRefresh(tm.statRefreshPending and 'refresh' or 'load')
+        tm.statRefreshPending = false
+        tm.statsDirty = true
+    end
     if tm.statsDirty then
         tm.statsDirty = false
         refreshStatChecks()   -- needs player() reads, so it happens here

@@ -7,7 +7,7 @@
 local config = require('cw.config')
 local D  = require('cw.data')
 local ELEMENTS, EFFECT_OVERLOAD, EFFECT_MANEUVER_1, SC_NAME = D.ELEMENTS, D.EFFECT_OVERLOAD, D.EFFECT_MANEUVER_1, D.SC_NAME
-local SC_PAIRS, MOBSKILL_SC, MANEUVER_STAT, PLAYER_STAT_INDEX = D.SC_PAIRS, D.MOBSKILL_SC, D.MANEUVER_STAT, D.PLAYER_STAT_INDEX
+local SC_PAIRS, MOBSKILL_SC, MANEUVER_STAT = D.SC_PAIRS, D.MOBSKILL_SC, D.MANEUVER_STAT
 local SLOT_HANDS, WS_LISTS = D.SLOT_HANDS, D.WS_LISTS
 local tm = require('cw.state')
 local U  = require('cw.util')
@@ -19,6 +19,7 @@ local R  = require('cw.reading')
 local equippedNames, hasAttachment = R.equippedNames, R.hasAttachment
 local A  = require('cw.attachments')
 local maneuverStep = A.maneuverStep
+local G  = require('cw.gear')
 -- The shared tables, never reassigned after cw/state.lua creates them.
 local burden, cost, samples, ids = tm.burden, tm.cost, tm.samples, tm.ids
 local snap, costSource, costDispute, burdenVerified = tm.snap, tm.costSource, tm.costDispute, tm.burdenVerified
@@ -26,25 +27,22 @@ local castThresh, castStat, seededBy, lastReconcile = tm.castThresh, tm.castStat
 local waterSince = tm.waterSince
 local castBonus = tm.castBonus
 
--- Your side of the stat check, read from memory now.
+-- Your side of the stat check, with the gear you have on now: cw/gear.lua
+-- corrects the stale total in memory by what was swapped since it arrived.
 local function myStat(el)
     local statName = MANEUVER_STAT[el]
     if statName == 'MP' then
         -- Current MP is a party-slot read; IPlayer only has GetMPMax.
         return safe(function() return AshitaCore:GetMemoryManager():GetParty():GetMemberMP(0) end, nil)
     end
-    local idx = PLAYER_STAT_INDEX[statName]
-    return safe(function()
-        local p = player()
-        return p:GetStat(idx) + (p:GetStatModifier(idx) or 0)
-    end, nil)
+    return (G.liveStat(statName))
 end
 
 -- The stat you have on when this element's maneuver goes off, when you have
 -- told the addon what it is (config.stat_check as a number). It outranks the
--- live read because the live read cannot see a gear-swap set: no 0x061 follows
--- an equip, so IPlayer still holds the stats of whatever was worn at the last
--- refresh. Dark is excluded - it compares MP, which is read live and current.
+-- live read, which now follows a gear-swap set (cw/gear.lua) but only counts
+-- an item's plain stat lines - a number you typed is taken as the truth. Dark
+-- is excluded - it compares MP, which is read live and current.
 local function statOverride(el)
     if el == 'Dark' then return nil end
     local v = config.stat_check and config.stat_check[el] or nil

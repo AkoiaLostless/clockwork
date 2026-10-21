@@ -135,6 +135,7 @@ tm.auto044 = nil      -- last PUP extended-job packet (0x044): skills, stats, ow
 tm.auto044Seq = 0     -- bumped per 0x044, so an apply step can wait for the reply to ITS packet
 tm.zoneSeq = 0        -- bumped per 0x00A, so an apply can notice it zoned
 tm.statsDirty = false -- set by the packet thread, consumed on d3d_present
+tm.statRefreshPending = false -- a 0x061 arrived; the next frame records the gear (cw/gear.lua)
 tm.eqCache, tm.eqCacheAt   = nil, 0
 tm.eqCacheSeq = -1      -- the 0x044 sequence the cache was built against
 tm.oilCache, tm.oilCacheAt = nil, 0

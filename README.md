@@ -85,7 +85,7 @@ To load it every time, add `/addon load clockwork` to your Ashita script.
 | `/cw attachments` | the attachments you own |
 | `/cw equipped` | head, frame and attachments |
 | `/cw load <name>` | put a saved attachment set on the automaton, as the Loadout tab's Apply does — the same checks, the same apply, so the automaton has to be deactivated first. Works from a macro; a name with a space needs no quotes. Bare `/cw load` lists your sets |
-| `/cw stat` | the stat you wear when each maneuver goes off — `/cw stat wind 83`, `now` to take what you are wearing, `off` to go back to reading it. See *Gear swaps* below |
+| `/cw stat` | the stat you wear when each maneuver goes off, read off your gear — or set it: `/cw stat wind 83`, `now` to take what you are wearing, `off` to go back to reading it. See *Gear swaps* below |
 | `/cw reset` | clear burden, learned costs and counters |
 | `/cw sync` | burden to zero — manual resync only |
 
@@ -121,18 +121,27 @@ are the exception: those are the client's own numbers.
 
 A maneuver costs 15 burden when your stat meets or beats the automaton's and 20 when it
 does not, compared as the maneuver goes off — so a gear-swap addon that puts a stat set on
-for the maneuver changes the answer. **clockwork cannot see that set.** The client is only
-told your stats when it asks (opening the status or equipment menu) or when something like
-a level or a kill makes the server send them, and *never* because you swapped gear, so the
-stats it reads are whatever you were wearing at the last such moment.
+for the maneuver changes the answer.
 
-If you swap for maneuvers, tell it what you wear: `/cw stat wind 83`. That number is
-compared against the automaton's live stat, so the check is still lost once that element is
-stacked and its stat climbs past yours. `/cw stat wind now` takes the value from memory —
-open the equipment menu while wearing the set first, or it will take the stale one — and
-`/cw stat wind off` goes back to reading it. The values are saved, and the Tuning tab's
-cost view says `your setting` for an element using one. Change food, sub job or gear and
-the number is stale: a stat check that contradicts it is logged, and says so.
+The client is only told your stats when it asks (opening the status or equipment menu) or
+when something like a level or zoning makes the server send them, and *never* because you
+swapped gear. What it *does* see straight away is what is in each equipment slot. So
+clockwork remembers the gear you had on the last time the server sent your stats, and
+corrects the stat in memory by the difference:
+
+    your stat now = stat in memory − that gear's stats + the stats of what you wear now
+
+A LuAshitacast or GearSwap maneuver set is therefore counted with no menu opening and no
+setting. The gear's stats are read from each item's description, plain lines only
+(`STR+3`, `AGI-2`, `All attributes +1`): latent effects, set bonuses and automaton/pet
+lines are conditional and are left out, and food, buffs and merits ride along inside the
+number in memory. If you load clockwork mid-session it assumes the gear on at load is what
+your last stat refresh saw; open the equipment menu once if you loaded it in other gear.
+
+If the read is still wrong for you — a set bonus or latent that matters — tell it what you
+wear: `/cw stat wind 83`. A typed number outranks the read, and is compared against the
+automaton's live stat, so the check is still lost once that element is stacked. `/cw stat
+wind now` takes the corrected read, and `/cw stat wind off` goes back to reading it.
 
 ## Reporting a wrong prediction
 

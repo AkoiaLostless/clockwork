@@ -19,10 +19,9 @@ local resetModel = P.resetModel
 -- The shared table, never reassigned after cw/state.lua creates it.
 local samples = tm.samples
 
--- `/cw stat` - your side of the stat check, typed, for the gear the client
--- cannot be asked about: a swap sends no stat packet, so a maneuver set's stats
--- never reach memory and the live read is whatever was worn at the last refresh
--- (the equipment menu, a level, a kill). The number is compared against the
+-- `/cw stat` - your side of the stat check, typed, for what the gear read
+-- (cw/gear.lua) cannot count: a set bonus, a latent, a description it parses
+-- wrong. The live read follows a swap by the item text. The number is compared against the
 -- automaton's LIVE stat on every use, so an element you beat bare still costs
 -- 20 once that element is stacked.
 local function statCommand(which, value)
