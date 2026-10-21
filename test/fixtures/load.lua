@@ -165,11 +165,13 @@ local api = (function()
         resetSwallowed = function() tm.swallowed = 0 end,
         config = config, reconcile = B.reconcile, decayRate = B.decayRate,
         computeCost = function(el, mine) return B.computeCost(el, mine) end,
+        myStat = function(el) return B.myStat(el) end,
         costLadder = function(el) return B.costLadder(el) end,
         model = function()
             return { burden = tm.burden, cost = tm.cost, costSource = tm.costSource,
                      costDispute = tm.costDispute, waterSince = tm.waterSince,
-                     verified = tm.burdenVerified, seededBy = tm.seededBy }
+                     verified = tm.burdenVerified, seededBy = tm.seededBy,
+                     castStat = tm.castStat, statBasis = tm.statBasis }
         end,
         -- the two big closures' upvalue counts, for the harness's ceiling
         -- checks: debug.getinfo on the module functions, because the

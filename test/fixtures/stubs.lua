@@ -512,14 +512,17 @@ AshitaCore = {
         return {
             GetItemById = function(_, id)
                 local n = ITEMS[id]
-                if n == nil then return nil end
+                -- world.itemDesc: item id -> description text, for the gear
+                -- a fixture wears to move a stat (cw/gear.lua)
+                local desc = world.itemDesc and world.itemDesc[id]
+                if n == nil and desc == nil then return nil end
                 -- Bitmap/ImageSize are real IItem fields and are what the
                 -- compact strip's ability icons load from; withheld with the
                 -- status icons so the fallback path can be tested too.
                 if world.iconsAvailable then
-                    return { Name = { n }, Bitmap = 0, ImageSize = 0 }
+                    return { Name = { n or '?' }, Description = { desc }, Bitmap = 0, ImageSize = 0 }
                 end
-                return { Name = { n } }
+                return { Name = { n or '?' }, Description = { desc } }
             end,
             GetStatusIconByIndex = function(_, id)
                 if world.iconsAvailable then return { Bitmap = 0, ImageSize = 0, id = id } end

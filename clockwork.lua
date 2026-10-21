@@ -1,6 +1,6 @@
 addon.name    = 'clockwork'
 addon.author  = 'Pathead'
-addon.version = '1.21.0'
+addon.version = '1.22.0'
 addon.desc    = 'Puppetmaster burden, maneuvers, weaponskill prediction, loadout and anomaly logging.'
 
 require('common')
@@ -16,6 +16,7 @@ local tm     = require('cw.state')
 local U      = require('cw.util')
 local L      = require('cw.log')
 require('cw.reading')
+require('cw.gear')       -- publishes tm.statBasis
 require('cw.cooldowns')  -- publishes tm.jaList and tm.jaRefresh
 require('cw.attachments')
 require('cw.burden')

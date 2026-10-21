@@ -874,6 +874,11 @@ local function onPacket(e)
         onAction(e.data)
     elseif e.id == 0x076 then
         onPartyBuffs(e.data)
+    elseif e.id == 0x061 then
+        -- Your stats. The gear they were taken with is recorded on the next
+        -- frame (cw/gear.lua): the client has applied the packet by then, and
+        -- a frame does not run while a zone-in is still loading the gear.
+        tm.statRefreshPending = true
     end
 end
 
