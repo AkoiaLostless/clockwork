@@ -1,6 +1,8 @@
 # clockwork
 
-> **Approved for use on HorizonXI.**
+> This is a fork of [patheed-ffxi/clockwork](https://github.com/patheed-ffxi/clockwork),
+> which is **approved for use on HorizonXI**. The fork adds gear-aware stat reads (see
+> *Gear swaps* below); that change has not been reviewed by Horizon staff.
 
 An [Ashita](https://www.ashitaxi.com/) 4.3 addon for [HorizonXI](https://horizonxi.com/):
 a HUD for **Puppetmaster**. It shows you what your automaton is actually doing —
@@ -20,6 +22,10 @@ prediction did *not* match the server, so the model can be corrected from real p
   than a Water maneuver in Devotee's Mitts. An element with nothing up that cannot
   overload anything yet can be hidden from the table (**hide burden at 0% OL**, Settings
   tab).
+- **Maneuver stat checks that follow your gear swaps.** Whether a maneuver costs 15 or
+  20 burden depends on your stat as it goes off. The stat is read with the gear you have
+  on at that moment, so a LuAshitacast or GearSwap maneuver set is counted with no menu
+  opening and no setting. See *Gear swaps* below.
 - **Maneuver slots and decay.** What is up, how long each has left, and the real decay
   rate — the Heatsink behaviour this model assumes for Horizon, not upstream's.
 - **Weaponskill prediction.** What the automaton will use next, and why, with skillchain
@@ -65,8 +71,10 @@ or the `1` button, goes back to one.
 
 ## Install
 
-1. Download the latest `clockwork.zip` from
-   [Releases](https://github.com/patheed-ffxi/clockwork/releases), or clone this repo.
+1. On [github.com/AkoiaLostless/clockwork](https://github.com/AkoiaLostless/clockwork),
+   press **Code → Download ZIP**, or clone this repo. (The original's
+   [Releases](https://github.com/patheed-ffxi/clockwork/releases) do not have the
+   gear-aware stats.)
 2. Put the `clockwork` folder into your Ashita `addons` directory, so that you have
    `addons/clockwork/clockwork.lua` with `cw/` and `assets/` beside it.
 3. In game: `/addon load clockwork`
@@ -145,7 +153,10 @@ wind now` takes the corrected read, and `/cw stat wind off` goes back to reading
 
 ## Reporting a wrong prediction
 
-Open an issue at [github.com/patheed-ffxi/clockwork/issues](https://github.com/patheed-ffxi/clockwork/issues)
+A stat read wrong after a gear swap comes from this fork, not the original, so do not
+report it upstream; note the item's name and its description text, which is what the read
+is taken from. Anything else can go to the original at
+[github.com/patheed-ffxi/clockwork/issues](https://github.com/patheed-ffxi/clockwork/issues),
 with:
 
 - the clockwork version (`addon.version` at the top of `clockwork.lua`);
@@ -173,6 +184,9 @@ abilities involved — check an excerpt before you post it.
 
 clockwork stands on other people's work:
 
+- **clockwork** (Pathead, [patheed-ffxi/clockwork](https://github.com/patheed-ffxi/clockwork))
+  — the original addon this fork is built from; everything but the gear-aware stat read
+  is theirs.
 - **[LandSandBoat](https://github.com/LandSandBoat/server)** — the burden, overload,
   weaponskill, spell and attachment logic is re-implemented from its
   `automatonentity.cpp`, `automaton_controller.cpp`, `automaton.lua` and SQL tables.
