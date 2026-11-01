@@ -58,7 +58,7 @@ local function menuName()
     return (ashita.memory.read_string(header + 0x46, 16):gsub('\x00', ''))
 end
 
-local function uiHidden()
+local function readUiHidden()
     return safe(function()
         -- map and region map both carry 'map' in the menu name
         if menuName():match('map') ~= nil then return true end
@@ -79,6 +79,23 @@ local function uiHidden()
         -- character select, mid-zone.
         return AshitaCore:GetMemoryManager():GetParty():GetMemberTargetIndex(0) == 0
     end, false)
+end
+
+-- The same answer for tm.hiddenEvery seconds. Each read walks a pointer chain
+-- through the client's menu, event and interface objects, and a menu that is
+-- opening or closing may leave one of those links pointing at memory being
+-- freed: a native fault, which no pcall catches. Asking a few times a second
+-- instead of every frame cuts those reads by an order of magnitude, and a
+-- quarter second is still well inside the time a map takes to open.
+-- tm.hiddenEvery is the interval (the harness sets it to 0).
+tm.hiddenEvery = 0.25
+local hiddenAt, hiddenWas = nil, false
+local function uiHidden()
+    local now = os.clock()
+    if hiddenAt == nil or now - hiddenAt >= tm.hiddenEvery or now < hiddenAt then
+        hiddenAt, hiddenWas = now, readUiHidden()
+    end
+    return hiddenWas
 end
 
 -- ------------------------------------------------------- target expiry --
@@ -165,6 +182,13 @@ local function sampleFlameHolder()
     end
 end
 
+-- How often the model runs between packets, in seconds (the harness sets it
+-- to 0, so every frame it draws runs the model as it always did).
+tm.modelEvery = 0.1
+tm.modelDirty = true
+local modelAt, modelDraws, jaDue = nil, false, true
+local model   -- defined below tick(), which calls it
+
 -- What every frame does before anything is drawn: the ids, the decay tick,
 -- the snapshot the packet thread reads, the Flame Holder sample, the stat
 -- checks, the predictions, the recast rows, the loadout record. Returns
@@ -182,6 +206,37 @@ local function tick()
         if atCharacterSelect() then tm.auto044SeqSeen = tm.auto044Seq end
         return false
     end
+    -- The model below does not need 60 answers a second: nothing it shows
+    -- moves faster than a second, and every packet it cares about marks it
+    -- dirty (tm.modelDirty, set in cw/inbound.lua and by every command), so
+    -- a cast, a maneuver or a stat refresh is still seen on the very next
+    -- frame. Between those it runs every tm.modelEvery seconds; the frames in
+    -- between only draw what it last worked out.
+    local now = os.clock()
+    if tm.modelDirty or modelAt == nil or now - modelAt >= tm.modelEvery or now < modelAt then
+        modelAt, tm.modelDirty = now, false
+        modelDraws = model()
+        jaDue = true
+    end
+    if not modelDraws then return false end
+    if not config.show_window then return false end
+    -- Everything above this line is the model and the logger: they keep
+    -- running with the window down. Only the drawing stops.
+    if uiHidden() then return false end
+    -- Your own job abilities' recasts (cw/cooldowns.lua) are display only, so
+    -- they are read here, below the gates, and not with the model above -
+    -- and at the model's pace, not every frame.
+    if jaDue then
+        jaDue = false
+        tm.jaRefresh()
+    end
+    return true
+end
+
+-- The model's pass: what tick() runs every tm.modelEvery seconds, or at once
+-- after a packet or command marks it dirty. Returns whether the HUD has
+-- anything to draw (a PUP, main or sub).
+function model()
     -- The made-up world moves before anything reads it, so the model sees a
     -- moving picture rather than a still one. Costs nothing when demo mode is off.
     DEMO.tick()
@@ -251,13 +306,6 @@ local function tick()
         end
         tm.predManeuvers = (#parts > 0) and table.concat(parts, '/') or 'none'
     end
-    if not config.show_window then return false end
-    -- Everything above this line is the model and the logger: they keep
-    -- running with the window down. Only the drawing stops.
-    if uiHidden() then return false end
-    -- Your own job abilities' recasts (cw/cooldowns.lua) are display only, so
-    -- they are read here, below the gates, and not with the model above.
-    tm.jaRefresh()
     return true
 end
 

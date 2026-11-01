@@ -1,6 +1,6 @@
 addon.name    = 'clockwork'
 addon.author  = 'Pathead'
-addon.version = '1.22.0'
+addon.version = '1.23.0'
 addon.desc    = 'Puppetmaster burden, maneuvers, weaponskill prediction, loadout and anomaly logging.'
 
 require('common')
@@ -36,11 +36,26 @@ local PN     = require('cw.ui.panel')
 
 ashita.events.register('packet_in', 'clockwork_packet', IN.onPacket)
 
-ashita.events.register('d3d_present', 'clockwork_present', function()
+-- tm.frameId numbers the frames, and tm.inFrame says one is being drawn:
+-- reads that cannot change inside a frame are made once per frame id
+-- (activeManeuvers in cw/burden.lua). Cleared even when the frame errors.
+tm.frameId, tm.inFrame = 0, false
+local function present()
     if F.tick() then PN.draw() end
+end
+ashita.events.register('d3d_present', 'clockwork_present', function()
+    tm.frameId, tm.inFrame = tm.frameId + 1, true
+    local ok, err = pcall(present)
+    tm.inFrame = false
+    if not ok then error(err, 0) end
 end)
 
-ashita.events.register('command', 'clockwork_cmd', C.onCommand)
+-- A command can change what the model shows (a stat, a set, demo mode), so
+-- the next frame re-runs it rather than waiting out its interval.
+ashita.events.register('command', 'clockwork_cmd', function(e)
+    tm.modelDirty = true
+    C.onCommand(e)
+end)
 
 ashita.events.register('load', 'clockwork_load', function()
     P.resolveIds()

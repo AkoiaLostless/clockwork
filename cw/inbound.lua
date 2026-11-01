@@ -787,6 +787,10 @@ local function onAction(data)
 
     local isSelf = (snap.self_id ~= 0 and act.actor_id == snap.self_id)
     local isMine = (snap.pet_id  ~= 0 and act.actor_id == snap.pet_id)
+    -- Our own action or the automaton's: the next frame re-runs the model
+    -- (cw/frame.lua) rather than waiting out its interval. Anyone else's
+    -- is picked up at the model's own pace.
+    if isSelf or isMine then tm.modelDirty = true end
 
     -- ---- resonance tracking (deliberately ahead of the actor gate) -------
     followPetTarget(act, isMine)
@@ -862,8 +866,12 @@ end
 
 -- packet_in: drops injected packets, then hands each packet we read to its
 -- handler by id.
+-- Every id handled here but 0x028 also marks the model dirty, so the next
+-- frame re-runs it (cw/frame.lua); onAction does it for our own actions only.
+local DIRTIES = { [0x044] = true, [0x00A] = true, [0x029] = true, [0x076] = true, [0x061] = true }
 local function onPacket(e)
     if e.injected then return end
+    if DIRTIES[e.id] then tm.modelDirty = true end
     if e.id == 0x044 then
         parseJobExtra(e.data)  -- pure string ops: safe on the packet thread
     elseif e.id == 0x00A then

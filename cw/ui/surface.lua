@@ -63,11 +63,18 @@ local HUD_FLAGS = bit.bor(ImGuiWindowFlags_NoTitleBar, ImGuiWindowFlags_NoCollap
 -- Both are read once a frame by tm.rescale, in draw(): each hits GetStyle(),
 -- and a frame calls tm.s a few hundred times.
 tm.own, tm.draw = 1, 1
+-- ImGui's base font size, read with the scale: tm.px and tm.dpx run for every
+-- string of every frame. nil until the first rescale, and they read it live.
+tm.fontBase = nil
 tm.rescale = function()
     local st = imgui.GetStyle()
     tm.own  = (config.ui_scale or 100) / 100
     -- nil-safe: an Ashita older than 4.2.0.1 has neither field.
     tm.draw = tm.own * (st.FontScaleMain or 1) * (st.FontScaleDpi or 1)
+    tm.fontBase = st.FontSizeBase
+end
+local function fontBase()
+    return tm.fontBase or imgui.GetStyle().FontSizeBase
 end
 
 -- `n` px as it will be drawn. Rounds rather than truncates, and never returns
@@ -155,7 +162,7 @@ end
 local SCALE = { label = 1.0, text = 1.25, head = 1.45 }
 tm.px = function(kind)
     -- tm.own, not tm.draw: see the scaling block above.
-    return math.floor(imgui.GetStyle().FontSizeBase * tm.own * (SCALE[kind] or 1) + 0.5)
+    return math.floor(fontBase() * tm.own * (SCALE[kind] or 1) + 0.5)
 end
 
 -- The height a voice actually OCCUPIES on screen: tm.px is the base we hand
@@ -163,7 +170,7 @@ end
 -- A box drawn to match a string - an icon, a recast square, a cell - is a layout
 -- number and has to use this one.
 tm.dpx = function(kind)
-    return math.floor(imgui.GetStyle().FontSizeBase * tm.draw * (SCALE[kind] or 1) + 0.5)
+    return math.floor(fontBase() * tm.draw * (SCALE[kind] or 1) + 0.5)
 end
 
 -- Colours as ImGui packs them, cached by table: a GetColorU32 for every

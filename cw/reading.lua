@@ -50,7 +50,15 @@ end
 -- server builds at runtime (battlefields, script pops). The player band is
 -- never a target, so it is skipped. Stopping at 0x3FF would read a battlefield
 -- mob as out of sight all fight.
+--
+-- A mob's server id carries its entity index in its low 12 bits (0x01ZZZIII:
+-- zone, then index), so that slot is asked first and the walk is only the
+-- fallback for an id that does not follow the pattern.
 local function scanFor(ent, id)
+    local guess = bit.band(id, 0xFFF)
+    if guess <= 0x8FF and (guess < 0x400 or guess >= 0x700) and ent:GetServerId(guess) == id then
+        return guess
+    end
     for i = 0, 0x8FF do
         if (i < 0x400 or i >= 0x700) and ent:GetServerId(i) == id then return i end
     end
