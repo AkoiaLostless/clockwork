@@ -18,6 +18,11 @@ setmetatable(_G, {
 })
 local chunk = assert(loadfile(ADDON_DIR .. '/clockwork.lua'))
 chunk()
+-- The model's pace and the visibility read's (cw/frame.lua) run every frame
+-- here: the suites change the world and draw one frame to see it, with the
+-- fake clock standing still. A suite that tests the pacing sets them back.
+require('cw.state').modelEvery = 0
+require('cw.state').hiddenEvery = 0
 -- The api the suites reach the addon's internals through, built from the
 -- loaded modules: require hands back the instances the addon itself loaded.
 local api = (function()

@@ -375,38 +375,62 @@ local function gameUtcStamp()
     if stamp == nil or stamp == 0 then return os.time() end
     return stamp
 end
-local function timerToSeconds(raw)
+-- `offset` is the server clock in timer units; one read of it serves every
+-- timer in the same pass.
+local function serverOffset() return (safe(gameUtcStamp, os.time()) - VANA_EPOCH) * 60 end
+local function timerToSeconds(raw, offset)
     if raw == nil then return 0 end
-    local offset = (safe(gameUtcStamp, os.time()) - VANA_EPOCH) * 60
+    offset = offset or serverOffset()
     local rem = raw - offset
     while rem < -2147483648 do rem = rem + 0xFFFFFFFF end
     if rem < 1 then return 0 end
     return math.ceil(rem / 60)
 end
 
-local function activeManeuvers()
-    if tm.demo ~= nil then return tm.demo.maneuvers, tm.demo.overload end
+local function readManeuvers()
     local out, overload = {}, nil
     safe(function()
         local p      = player()
         local icons  = p:GetStatusIcons()
         local timers = p:GetStatusTimers()
         if icons == nil then return end
+        local offset = nil   -- the server clock, read once, and only if a timer needs it
+        local function secs(raw)
+            if raw == nil then return 0 end
+            offset = offset or serverOffset()
+            return timerToSeconds(raw, offset)
+        end
         for i = 0, 31 do
             local id = icons[i + 1]
             if id ~= nil then
                 if id == EFFECT_OVERLOAD then
-                    overload = timerToSeconds(timers and timers[i + 1])
+                    overload = secs(timers and timers[i + 1])
                 end
                 if id >= EFFECT_MANEUVER_1 and id <= EFFECT_MANEUVER_1 + 7 then
                     out[#out + 1] = { element = ELEMENTS[id - EFFECT_MANEUVER_1 + 1],
-                                      remaining = timerToSeconds(timers and timers[i + 1]) }
+                                      remaining = secs(timers and timers[i + 1]) }
                 end
             end
         end
     end)
     table.sort(out, function(a, b) return (a.remaining or 0) < (b.remaining or 0) end)
     return out, overload
+end
+
+-- Your maneuvers and Overload, read once a frame. The model, the HUD and the
+-- sidebar each ask several times in one frame and the answer cannot change
+-- inside it, so the first ask reads the status icons and timers and the rest
+-- share that answer. Outside a frame (tm.inFrame, set around d3d_present by
+-- clockwork.lua) every ask reads afresh. Callers only read the list.
+local memoFrame, memoOut, memoOverload = nil, nil, nil
+local function activeManeuvers()
+    if tm.demo ~= nil then return tm.demo.maneuvers, tm.demo.overload end
+    if not tm.inFrame then return readManeuvers() end
+    if memoFrame ~= tm.frameId then
+        memoFrame = tm.frameId
+        memoOut, memoOverload = readManeuvers()
+    end
+    return memoOut, memoOverload
 end
 
 -- ------------------------------------------------ weaponskill prediction -

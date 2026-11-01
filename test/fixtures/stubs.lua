@@ -394,7 +394,7 @@ for _, k in ipairs({
     'GetPetTP','GetName','GetServerId','GetHPPercent','GetDistance','GetMemberTargetIndex',
     'GetMemberName','GetMemberHP','GetMemberIsActive','GetMemberHPPercent','GetMemberTP',
     'GetContainerItem','GetContainerCount','GetItemById','GetStatusIconByIndex','GetString',
-    'GetSpellById','GetAbilityById',
+    'GetSpellById','GetAbilityById','GetContainerCountMax',
     -- called only from inside safe(), so a permissive stub answered 0 and
     -- nothing ever noticed they were unstubbed
     'GetStat','GetStatModifier','GetEquippedItem','GetMemberMP',
